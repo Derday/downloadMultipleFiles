@@ -5,44 +5,49 @@ from pathlib import Path
 import os
 from os.path import isfile, join
 
+class Download:
 
-PATH = Path(os.path.dirname(__file__))
-TEMP_FOLDER = PATH.joinpath('temp')
-OUT = PATH.joinpath('out')
+    def __init__(self) -> None:
+        self.path = Path(os.path.dirname(__file__))
+        self.tempFolder = self.path.joinpath('temp')
+    
+    def fromFile(self, file:str = 'input.txt') -> None:
+        """
+        Download files from urls, that are in `input file`
+        """
+        with open(self.path.joinpath(file), 'r') as f:
+            urls = f.readlines()
+        urls = list(map(lambda str: str.rstrip(), urls))
+        for url in urls:
+            self.download(url, 50)
+
+    def download(self, url: str, parts: int) -> None:
+        """
+        Downloads file from url
+        """
+        frontend = ConsoleFrontend()
+        model_path = self.tempFolder.joinpath('model.tflite')
+        model_download_url = 'https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.tflite'
+        solver = AutoReadCaptcha(model_path, model_download_url, frontend)
+        d = Downloader(frontend, solver)
+        timeout = 3
+        d.download(url, parts, self.tempFolder, timeout)
+        d.terminate()
+
+    def cleanup(self, outFolder: Path = None ) -> None:
+        """
+        Move downloaded files to different folder, removes the remaining `.ucache` and `.udown` files.
+        """
+        out = outFolder or self.path.joinpath('downloaded')
+        os.system(f'rm {self.tempFolder.joinpath("*.ucache")}')
+        os.system(f'rm {self.tempFolder.joinpath("*.udown")}')
+        files = [f for f in os.listdir(self.tempFolder) if isfile(join(self.tempFolder, f))]
+        files.remove('model.tflite')
+        for file in files:
+            os.system(f'mv {self.tempFolder}/"{file}" {out}')
 
 
-def download(url, parts):
-    frontend = ConsoleFrontend()
-    model_path = TEMP_FOLDER.joinpath('model.tflite')
-    model_download_url = 'https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.tflite'
-    solver = AutoReadCaptcha(model_path, model_download_url, frontend)
-    d = Downloader(frontend, solver)
-    timeout = 3
-    d.download(url, parts, TEMP_FOLDER, timeout)
-    d.terminate()
-
-
-def cleanup():
-    os.system(f'rm {TEMP_FOLDER.joinpath("*.ucache")}')
-    os.system(f'rm {TEMP_FOLDER.joinpath("*.udown")}')
-    files = [f for f in os.listdir(TEMP_FOLDER) if isfile(join(TEMP_FOLDER, f))]
-    files.remove('model.tflite')
-    for file in files:
-        os.system(f'mv {TEMP_FOLDER}/"{file}" {OUT}')
-
-
-
-with open('input.txt', 'r') as f:
-    urls = f.readlines()
-
-urls = list(map(lambda str: str.rstrip(), urls))
-for url in urls:
-    download(url, 50)
-
-
-cleanup()
-
-
-
-
-
+if __name__ == "__main__":
+    downloader = Download()
+    downloader.fromFile()
+    downloader.cleanup()
