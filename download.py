@@ -2,6 +2,7 @@ from time import sleep
 from uldlib.downloader import Downloader
 from uldlib.frontend import ConsoleFrontend
 from uldlib.captcha import AutoReadCaptcha
+from uldlib.torrunner import TorRunner
 from pathlib import Path
 import os
 import shutil
@@ -44,9 +45,9 @@ class Download:
         model_path = self.tempFolder.joinpath('model.tflite')
         model_download_url = 'https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.tflite'
         solver = AutoReadCaptcha(model_path, model_download_url, frontend)
-        d = Downloader(frontend, solver)
-        timeout = 3
-        d.download(url, parts, self.tempFolder, timeout)
+        tor = TorRunner(self.tempFolder, frontend.tor_log)
+        d = Downloader(tor, frontend, solver)
+        d.download(url=url, parts=parts, target_dir=self.tempFolder, temp_dir=self.tempFolder)
         d.terminate()
 
     def cleanup(self, outFolder: Path = None ) -> None:
