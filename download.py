@@ -40,7 +40,7 @@ class Download:
         """
         Downloads file from url
         """
-        frontend = ConsoleFrontend()
+        frontend = ConsoleFrontend(show_parts=False)
         model_path = self.tempFolder.joinpath('model.tflite')
         model_download_url = 'https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.tflite'
         solver = AutoReadCaptcha(model_path, model_download_url, frontend)
