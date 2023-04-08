@@ -1,3 +1,4 @@
+from threading import Thread
 from time import sleep
 from uldlib.downloader import Downloader
 from uldlib.frontend import ConsoleFrontend
@@ -13,6 +14,7 @@ class Download:
         self.path = Path(os.path.dirname(__file__))
         self.tempFolder = self.path.joinpath('temp')
         self.index = 0
+        self.queue = []
     
     def fromFile(self, file:str = 'input.txt') -> None:
         """
@@ -24,6 +26,10 @@ class Download:
                 self.download(line, 50)
             else:
                 break
+    def paraler(self, newFile:str):
+        self.queue.append(newFile)
+
+
     
     def _nextLine(self, path:Path) -> str:
         with open(path, 'r') as f:
@@ -60,8 +66,8 @@ class Download:
         files = os.listdir(self.tempFolder)
         files.remove('model.tflite')
         for file in files:
-            if file.endswith('.ucache') or file.endswith('*.udown'):
-                os.remove(os.path.join(files, file))
+            if file.endswith('.ucache') or file.endswith('.udown'):
+                os.remove(self.tempFolder.joinpath(file))
             else:
                 shutil.move(self.tempFolder.joinpath(file), out)
 
