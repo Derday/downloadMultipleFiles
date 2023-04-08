@@ -14,7 +14,6 @@ class Download:
         self.path = Path(os.path.dirname(__file__))
         self.tempFolder = self.path.joinpath('temp')
         self.index = 0
-        self.queue = []
     
     def fromFile(self, file:str = 'input.txt') -> None:
         """
@@ -26,10 +25,6 @@ class Download:
                 self.download(line, 50)
             else:
                 break
-    def paraler(self, newFile:str):
-        self.queue.append(newFile)
-
-
     
     def _nextLine(self, path:Path) -> str:
         with open(path, 'r') as f:
@@ -69,8 +64,12 @@ class Download:
             if file.endswith('.ucache') or file.endswith('.udown'):
                 os.remove(self.tempFolder.joinpath(file))
             else:
-                shutil.move(self.tempFolder.joinpath(file), out)
-
+                try:
+                    shutil.move(self.tempFolder.joinpath(file), out)
+                except Exception as e:
+                    if str(e).endswith('already exists'):
+                        os.rename(self.tempFolder.joinpath(file), self.tempFolder.joinpath(file.split('.')[0]+'_copy'+'.'+file.split('.')[1]))
+                        self.cleanup()
 
 
 if __name__ == "__main__":
