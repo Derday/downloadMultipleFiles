@@ -68,8 +68,8 @@ class Download:
                     shutil.move(self.tempFolder.joinpath(file), out)
                 except Exception as e:
                     if str(e).endswith('already exists'):
-                        os.rename(self.tempFolder.joinpath(file), self.tempFolder.joinpath(file.split('.')[0]+'_copy'+'.'+file.split('.')[1]))
-                        self.cleanup()
+                        os.rename(self.tempFolder.joinpath(file), self.tempFolder.joinpath(file.split('.')[0]+'_copy'+'.'+file.split('.')[-1]))
+                        self.cleanup(out)
 
 
 if __name__ == "__main__":
