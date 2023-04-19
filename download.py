@@ -10,40 +10,38 @@ import shutil
 import requests
 
 class File:
-    def __init__(self, url:str) -> None:
-        self.url = url
-        self.size: int
-        self.length: str
-        self.res: tuple(int, int)
-        self.file_info(self.url)
+    def __init__(self, url:str = None) -> None:
+        self.url = url or None
+        self.fileName: str = None
+        self.size: int = None
+        self.length: str = None
+        self.resolution: tuple(int, int) = None
+        if url:
+            self.file_info(self.url)
     
-    def file_info(self, url):
+    def file_info(self, url) -> None:
+        """
+        Scripe page for `size` of file eventually `length`, `resolution`
+        """
         ses = requests.get(url)
         source = ses.text
         soup = BeautifulSoup(source, 'html.parser')
         self.fileName = soup.title.string
         self.size = int(source.split('fileSize\': ')[1].split(',')[0])
         div = str(soup.find_all('div', {'class': 'info-media t-file-info-strip'})[0])
-        if 'Čas' in str(div):
+        if 'Čas' in str(div): 
             self.length = div.split('Čas')[1][8:].split('</li>')[0]
-            self.res = tuple(div.split('Rozlišení')[1][8:].split('</li>')[0].split('×'))
-        else:
-            self.length = None
-            self.res = None
+            self.resolution = tuple(div.split('Rozlišení')[1][8:].split('</li>')[0].split('×'))
 
-        # print(self.fileName)
-        # print(self.size)
-        # print(self.length)
-        # print(self.res)
 
 class Download:
-    MB_PER_PART = 25
+    MB_PER_PART = 25 # Mb per one part (how many Mb does one part will have)
     def __init__(self) -> None:
         self.path = Path(os.path.dirname(__file__))
         self.tempFolder = self.path.joinpath('temp')
         self.queue = []
         self.run = False
-        self.file: File
+        self.file: File = File()
         
     def from_file(self, file:str = 'input.txt') -> None:
         """
@@ -70,6 +68,9 @@ class Download:
         return line
 
     def add_to_queue(self, url: str, parts: int) -> None:
+        """
+        add url to queue and start downloading in background if it is not already running
+        """
         self.queue.append({'url':url, 'parts':parts})
         if not self.run:
             t = Thread(target=self._paraler_download)
@@ -96,16 +97,23 @@ class Download:
         solver = AutoReadCaptcha(model_path, model_download_url, frontend)
         tor = TorRunner(self.tempFolder, frontend.tor_log)
         d = Downloader(tor, frontend, solver)
-        d.download(url=url, parts=parts, target_dir=self.tempFolder, temp_dir=self.tempFolder)
+        for _ in range(10): # sometimes it raise random error for some reasone
+            try:
+                d.download(url=url, parts=parts, target_dir=self.tempFolder, temp_dir=self.tempFolder)
+            except Exception as e:
+                print(e)
+                print('Download failed, trying again')
+            else:
+                break
         d.terminate()
         
-    def cleanup(self, outFolder: Path = None ) -> None:
+    def cleanup(self, finallFolder: Path = None ) -> None:
         """
         Move downloaded files to different folder, removes the remaining `.ucache` and `.udown` files.
         """
-        out = outFolder or self.path.joinpath('downloaded')
-        if not out.exists():
-            out.mkdir(parents = False, exist_ok = False)
+        finallFolder = finallFolder or self.path.joinpath('downloaded')
+        if not finallFolder.exists():
+            finallFolder.mkdir(parents = False, exist_ok = False)
         files = os.listdir(self.tempFolder)
         files.remove('model.tflite')
         for file in files:
@@ -113,14 +121,19 @@ class Download:
                 os.remove(self.tempFolder.joinpath(file))
             else:
                 try:
-                    shutil.move(self.tempFolder.joinpath(file), out)
+                    shutil.move(self.tempFolder.joinpath(file), finallFolder)
                 except Exception as e:
                     if str(e).endswith('already exists'):
                         os.rename(self.tempFolder.joinpath(file), self.tempFolder.joinpath(file.split('.')[0]+'_copy'+'.'+file.split('.')[-1]))
-                        self.cleanup(out)
+                        self.cleanup(finallFolder)
 
 
 if __name__ == "__main__":
     downloader = Download()
     downloader.from_file()
+    # print(downloader.file.fileName)
+    # print(downloader.file.size)
+    # print(downloader.file.length)
+    # print(downloader.file.resolution)
+    # downloader.add_to_queue('...')
     downloader.cleanup()
